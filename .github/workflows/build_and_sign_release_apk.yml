@@ -22,9 +22,8 @@ jobs:
 
     strategy:
       fail-fast: false
-      max-parallel: 4
       matrix:
-        platform: [arm, arm64, x86, x64]
+        platform: [arm64]
 
     # The GitHub Actions machines have a "slow disk", and a SSD "fast" disk.
     # However, there is not enough space to do all the processing on the SSD.
@@ -97,21 +96,8 @@ jobs:
           echo 'user = storage' >> $HOME/.config/rclone/rclone.conf
           echo 'key_pem = ${{ secrets.STORAGE_KEY }}' >> $HOME/.config/rclone/rclone.conf
 
-      - name: Modifying args.gn (arm)
-        if: matrix.platform == 'arm'
-        run: sed -i "s#android_default_version_code = \"1\"#android_default_version_code = \"$(date '+%y%m%d')1\"#" secondary_disk/out/android_${{ matrix.platform }}/args.gn
-
       - name: Modifying args.gn (arm64)
-        if: matrix.platform == 'arm64'
         run: sed -i "s#android_default_version_code = \"1\"#android_default_version_code = \"$(date '+%y%m%d')2\"#" secondary_disk/out/android_${{ matrix.platform }}/args.gn
-
-      - name: Modifying args.gn (x86)
-        if: matrix.platform == 'x86'
-        run: sed -i "s#android_default_version_code = \"1\"#android_default_version_code = \"$(date '+%y%m%d')3\"#" secondary_disk/out/android_${{ matrix.platform }}/args.gn
-
-      - name: Modifying args.gn (x64)
-        if: matrix.platform == 'x64'
-        run: sed -i "s#android_default_version_code = \"1\"#android_default_version_code = \"$(date '+%y%m%d')4\"#" secondary_disk/out/android_${{ matrix.platform }}/args.gn
 
       - name: Displaying args.gn
         run: cat secondary_disk/out/android_${{ matrix.platform }}/args.gn
@@ -161,29 +147,11 @@ jobs:
           echo 'key_pem = ${{ secrets.STORAGE_KEY }}' >> $HOME/.config/rclone/rclone.conf
 
 
-      - name: Downloading artifact (arm)
-        uses: actions/download-artifact@v4
-        with:
-          name: apk-arm
-          path: apk-arm
-
       - name: Downloading artifact (arm64)
         uses: actions/download-artifact@v4
         with:
           name: apk-arm64
           path: apk-arm64
-
-      - name: Downloading artifact (x86)
-        uses: actions/download-artifact@v4
-        with:
-          name: apk-x86
-          path: apk-x86
-
-      - name: Downloading artifact (x64)
-        uses: actions/download-artifact@v4
-        with:
-          name: apk-x64
-          path: apk-x64
 
       - name: Listing files under $HOME
         run: |
@@ -193,7 +161,7 @@ jobs:
 
       - name: Prepare release notes
         run: |
-          cat ./apk-arm/last_commits.txt > release_notes.txt
+          cat ./apk-arm64/last_commits.txt > release_notes.txt
           cat <<EOT >> release_notes.txt
           
           This version will replace your currently installed Kiwi Browser (com.kiwibrowser.browser).
@@ -267,21 +235,7 @@ jobs:
       - name: Downloading artifacts from storage
         if: ${{ github.repository_owner == 'kiwibrowser' }}
         run: |
-          rclone copy --transfers=128 --retries=100 cache:kiwibrowser-builds/${{ github.run_id }}/arm/ ./apk-arm 
           rclone copy --transfers=128 --retries=100 cache:kiwibrowser-builds/${{ github.run_id }}/arm64/ ./apk-arm64
-          rclone copy --transfers=128 --retries=100 cache:kiwibrowser-builds/${{ github.run_id }}/x86/ ./apk-x86
-          rclone copy --transfers=128 --retries=100 cache:kiwibrowser-builds/${{ github.run_id }}/x64/ ./apk-x64
-
-      - name: Uploading release asset (arm-signed)
-        if: ${{ github.repository_owner == 'kiwibrowser' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./apk-arm/ChromePublic-DevSigned.apk
-          asset_name: com.kiwibrowser.browser-arm-${{ github.run_id }}-github.apk
-          asset_content_type: application/vnd.android.package-archive
 
       - name: Uploading release asset (arm64-signed)
         if: ${{ github.repository_owner == 'kiwibrowser' }}
@@ -294,39 +248,6 @@ jobs:
           asset_name: com.kiwibrowser.browser-arm64-${{ github.run_id }}-github.apk
           asset_content_type: application/vnd.android.package-archive
 
-      - name: Uploading release asset (x86-signed)
-        if: ${{ github.repository_owner == 'kiwibrowser' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./apk-x86/ChromePublic-DevSigned.apk
-          asset_name: com.kiwibrowser.browser-x86-${{ github.run_id }}-github.apk
-          asset_content_type: application/vnd.android.package-archive
-
-      - name: Uploading release asset (x64-signed)
-        if: ${{ github.repository_owner == 'kiwibrowser' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./apk-x64/ChromePublic-DevSigned.apk
-          asset_name: com.kiwibrowser.browser-x64-${{ github.run_id }}-github.apk
-          asset_content_type: application/vnd.android.package-archive
-
-      - name: Uploading dev asset (arm-signed)
-        if: ${{ github.repository_owner == 'kiwibrowser' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./apk-arm/ChromePublic-Next-DevSigned.apk
-          asset_name: com.kiwibrowser.browser.dev-arm-${{ github.run_id }}-github.apk
-          asset_content_type: application/vnd.android.package-archive
-
       - name: Uploading dev asset (arm64-signed)
         if: ${{ github.repository_owner == 'kiwibrowser' }}
         uses: actions/upload-release-asset@v1
@@ -336,28 +257,6 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./apk-arm64/ChromePublic-Next-DevSigned.apk
           asset_name: com.kiwibrowser.browser.dev-arm64-${{ github.run_id }}-github.apk
-          asset_content_type: application/vnd.android.package-archive
-
-      - name: Uploading dev asset (x86-signed)
-        if: ${{ github.repository_owner == 'kiwibrowser' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./apk-x86/ChromePublic-Next-DevSigned.apk
-          asset_name: com.kiwibrowser.browser.dev-x86-${{ github.run_id }}-github.apk
-          asset_content_type: application/vnd.android.package-archive
-
-      - name: Uploading dev asset (x64-signed)
-        if: ${{ github.repository_owner == 'kiwibrowser' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./apk-x64/ChromePublic-Next-DevSigned.apk
-          asset_name: com.kiwibrowser.browser.dev-x64-${{ github.run_id }}-github.apk
           asset_content_type: application/vnd.android.package-archive
 
       - name: Send announcement on Discord
@@ -384,7 +283,7 @@ jobs:
                       --arg text "A new build of Kiwi Browser Next (preview version) is available. Link: [${{ github.run_id }}](https://github.com/kiwibrowser/src.next/releases/tag/${{ github.run_id }}) $COMMIT_MSG" \
                       --arg chat_id "@kiwibrowserbuilds" \
                       --arg parse_mode "markdown" \
-                      --argjson reply_markup '{"inline_keyboard": [[{"text": "x86", "url": "https://github.com/kiwibrowser/src.next/releases/download/${{ github.run_id }}/com.kiwibrowser.browser-x86-${{ github.run_id }}-github.apk"},{"text": "x64", "url": "https://github.com/kiwibrowser/src.next/releases/download/${{ github.run_id }}/com.kiwibrowser.browser-x64-${{ github.run_id }}-github.apk"}],[{"text": "arm", "url": "https://github.com/kiwibrowser/src.next/releases/download/${{ github.run_id }}/com.kiwibrowser.browser-arm-${{ github.run_id }}-github.apk"},{"text": "arm64", "url": "https://github.com/kiwibrowser/src.next/releases/download/${{ github.run_id }}/com.kiwibrowser.browser-arm64-${{ github.run_id }}-github.apk"}],[{"text": ".DEV x86", "url": "https://github.com/kiwibrowser/src.next/releases/download/${{ github.run_id }}/com.kiwibrowser.browser.dev-x86-${{ github.run_id }}-github.apk"},{"text": ".DEV x64", "url": "https://github.com/kiwibrowser/src.next/releases/download/${{ github.run_id }}/com.kiwibrowser.browser.dev-x64-${{ github.run_id }}-github.apk"}],[{"text": ".DEV arm", "url": "https://github.com/kiwibrowser/src.next/releases/download/${{ github.run_id }}/com.kiwibrowser.browser.dev-arm-${{ github.run_id }}-github.apk"},{"text": ".DEV arm64", "url": "https://github.com/kiwibrowser/src.next/releases/download/${{ github.run_id }}/com.kiwibrowser.browser.dev-arm64-${{ github.run_id }}-github.apk"}]]}' \
+                      --argjson reply_markup '{"inline_keyboard": [[{"text": "arm64", "url": "https://github.com/kiwibrowser/src.next/releases/download/${{ github.run_id }}/com.kiwibrowser.browser-arm64-${{ github.run_id }}-github.apk"}],[{"text": ".DEV arm64", "url": "https://github.com/kiwibrowser/src.next/releases/download/${{ github.run_id }}/com.kiwibrowser.browser.dev-arm64-${{ github.run_id }}-github.apk"}]]}' \
                       '{text: $text, chat_id: $chat_id, parse_mode: $parse_mode, reply_markup: $reply_markup}')
           curl -H "Content-Type: application/json" -X POST -d "$PAYLOAD" https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage
 
