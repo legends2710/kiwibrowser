@@ -1,0 +1,39 @@
+# Kiwi Browser Android 15 ARM64 Build Configuration
+# Based on production build reference with Android 15 specific settings
+
+target_os = "android"
+target_cpu = "arm64"
+is_debug = false
+is_java_debug = false
+
+# Android 15 specific settings
+android_api_level = 35
+android_channel = "dev"
+
+# Build configuration
+is_official_build = true
+is_component_build = false
+is_chrome_branded = false
+is_clang = true
+symbol_level = 1
+exclude_unwind_tables = false
+
+# Version settings
+use_unofficial_version_number = false
+android_default_version_code = "1"
+android_keystore_name = "dev"
+android_keystore_password = "public_password"
+android_keystore_path = "../../keystore.jks"
+android_default_version_name = "Git"
+
+# Android SDK/NDK paths
+android_ndk_root = "/home/erick/android-tools/android-sdk/ndk/26.1.10909125"
+android_sdk_root = "/home/erick/android-tools/android-sdk"
+
+# Performance optimizations
+use_goma = false
+cc_wrapper = "ccache"
+
+# Additional Android 15 optimizations
+enable_resource_allowlist_generation = false
+dfmify_dev_ui = false
